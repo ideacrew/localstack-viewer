@@ -1,0 +1,16 @@
+{% extends "base" %}
+{% block content %}
+<h1>Region: {{ region }}</h1>
+<ul>
+{% for message_group in message_groups %}
+  <li>
+    <h2>{{message_group.phone_number}}<h2>
+    <ul>
+      {% for message in message_group.messages %}
+        <li>{{message}}</li>
+      {% endfor %}
+    </ul>
+  </li>
+{% endfor %}
+</ul>
+{% endblock content %}

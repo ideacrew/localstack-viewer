@@ -1,0 +1,11 @@
+[package]
+name = "localstack-viewer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rocket = "0.5.1"
+rocket_dyn_templates = { version = "0.2.0", features = ["tera"] }
+serde_json = { version = "1.0.140", features = ["raw_value"] }
+reqwest = { version = "0.12.22", features = ["blocking"] }
+serde = { version = "1.0.219" }
