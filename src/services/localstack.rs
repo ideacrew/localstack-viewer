@@ -65,6 +65,32 @@ impl LocalstackConfiguration {
     }
 }
 
+impl Into<tera::Context> for SmsMessageList {
+    fn into(self) -> tera::Context {
+        let mut ctxt = tera::Context::new();
+        ctxt.insert("region", &self.region);
+
+        let mut message_groups = Vec::new();
+
+        for (k, v) in self.sms_messages.into_iter() {
+            let mut mg_attrs = Map::new();
+            let mut mg_messages = Vec::new();
+            let _ = mg_attrs.insert(
+                "phone_number".to_owned(),
+                serde_json::Value::String(k.to_owned()),
+            );
+            for m in v {
+                mg_messages.push(serde_json::Value::String(m.as_ref().get().to_owned()));
+            }
+            let _ = mg_attrs.insert("messages".to_owned(), serde_json::Value::Array(mg_messages));
+            message_groups.push(serde_json::Value::Object(mg_attrs));
+        }
+        let message_group_array = serde_json::Value::Array(message_groups);
+        ctxt.insert("message_groups", &message_group_array);
+        ctxt
+    }
+}
+
 pub(crate) fn sms_message_list_for_template(message_list: SmsMessageList) -> serde_json::Value {
     let mut attrs = Map::new();
     let _ = attrs.insert(

@@ -15,7 +15,6 @@ ENV LOCALSTACK_URL="http://localhost:4566"
 
 RUN mkdir /localstack-viewer && mkdir /localstack-viewer/templates
 
-COPY --from=builder /build/templates /localstack-viewer/templates
 COPY --from=builder /build/target/release/localstack-viewer /localstack-viewer/localstack-viewer
 
 WORKDIR /localstack-viewer
