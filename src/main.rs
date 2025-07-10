@@ -1,14 +1,9 @@
 use std::env;
 
-use rocket::{Build, Rocket, State, get, http::ContentType, launch, response::Responder, routes};
-use rocket_dyn_templates::{Template, context};
-use tera::Tera;
+use rocket::{State, get, http::ContentType, routes};
 
 use crate::{
-    services::localstack::{
-        LocalstackConfiguration, ServiceInvocationError, get_sms_message_list,
-        sms_message_list_for_template,
-    },
+    services::localstack::{LocalstackConfiguration, ServiceInvocationError, get_sms_message_list},
     templates::{Templater, init_template_provider},
 };
 
