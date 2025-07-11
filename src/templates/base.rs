@@ -1,5 +1,33 @@
 use std::path::{Path, PathBuf};
 
+use rocket::http::ContentType;
+use tera::Tera;
+
+pub(crate) static TERA_EXT: &str = "tera";
+
+static TERA_ESCAPED_EXTENSIONS: [&str; 6] = [
+    ".html.tera",
+    ".htm.tera",
+    ".xml.tera",
+    ".html",
+    ".htm",
+    ".xml",
+];
+
+pub(crate) struct TemplateInfo {
+    pub(crate) name: String,
+    /// The complete path, including `template_dir`, to this template, if any.
+    pub(crate) path: Option<PathBuf>,
+    /// The extension before the engine extension in the template, if any.
+    pub(crate) data_type: ContentType,
+}
+
+pub(crate) fn tera_with_escape_settings() -> Tera {
+    let mut tera = Tera::default();
+    tera.autoescape_on(TERA_ESCAPED_EXTENSIONS.to_vec());
+    tera
+}
+
 /// Removes the file path's extension or does nothing if there is none.
 fn remove_extension(path: &Path) -> PathBuf {
     let stem = match path.file_stem() {

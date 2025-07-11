@@ -15,7 +15,8 @@ mod templates;
 async fn sms_messages(
     a_config: &State<AppConfig>,
     templater: &State<Templater>,
-) -> Result<(ContentType, String), ServiceInvocationError> {
+) -> Result<(ContentType, String), ServiceInvocationError> where
+{
     let data = get_sms_message_list(&a_config.localstack_config).await?;
     Ok(templater.render("sms_messages/index", data))
 }

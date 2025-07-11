@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         Arc, RwLock,
         mpsc::{Receiver, channel},
@@ -10,11 +10,11 @@ use std::{
 use rocket::http::ContentType;
 use tera::{Context, Tera};
 
-use crate::templates::shared::split_path;
+use crate::templates::base::{TERA_EXT, TemplateInfo, split_path, tera_with_escape_settings};
 
-use notify::{
-    Error, Event, RecommendedWatcher, RecursiveMode, Result, Watcher, recommended_watcher,
-};
+use notify::{Event, RecommendedWatcher, RecursiveMode, Result, Watcher, recommended_watcher};
+
+pub(crate) type Templater = ReloadableTemplater;
 
 struct TemplateInner {
     watcher: RecommendedWatcher,
@@ -23,20 +23,12 @@ struct TemplateInner {
     content_types: HashMap<String, ContentType>,
 }
 
-pub(crate) struct Templater {
+pub(crate) struct ReloadableTemplater {
     inner: Arc<RwLock<TemplateInner>>,
 }
 
-unsafe impl Send for Templater {}
-unsafe impl Sync for Templater {}
-
-pub(crate) struct TemplateInfo {
-    pub(crate) name: String,
-    /// The complete path, including `template_dir`, to this template, if any.
-    pub(crate) path: Option<PathBuf>,
-    /// The extension before the engine extension in the template, if any.
-    pub(crate) data_type: ContentType,
-}
+unsafe impl Send for ReloadableTemplater {}
+unsafe impl Sync for ReloadableTemplater {}
 
 impl TemplateInner {
     pub fn reload_if_needed(&mut self) {
@@ -54,8 +46,8 @@ impl TemplateInner {
     }
 }
 
-impl Templater {
-    pub fn render<C>(&self, template_name: &str, context: C) -> (ContentType, String)
+impl ReloadableTemplater {
+    pub(crate) fn render<C>(&self, template_name: &str, context: C) -> (ContentType, String)
     where
         C: Into<Context>,
     {
@@ -70,9 +62,7 @@ impl Templater {
     }
 }
 
-static TERA_EXT: &str = "tera";
-
-pub(crate) fn load_templates() -> Vec<TemplateInfo> {
+fn load_templates() -> Vec<TemplateInfo> {
     let mut templates: Vec<TemplateInfo> = Vec::new();
     let root = std::path::Path::new("templates");
     for entry in walkdir::WalkDir::new(&root).follow_links(true) {
@@ -97,19 +87,10 @@ pub(crate) fn load_templates() -> Vec<TemplateInfo> {
     templates
 }
 
-pub fn load_inner_props() -> (Tera, HashMap<String, ContentType>) {
+fn load_inner_props() -> (Tera, HashMap<String, ContentType>) {
     let templates = load_templates();
 
-    let mut tera = Tera::default();
-    let ext = [
-        ".html.tera",
-        ".htm.tera",
-        ".xml.tera",
-        ".html",
-        ".htm",
-        ".xml",
-    ];
-    tera.autoescape_on(ext.to_vec());
+    let mut tera = tera_with_escape_settings();
 
     let typed_templates = HashMap::from_iter(
         templates
@@ -152,9 +133,7 @@ pub(crate) fn init_template_provider() -> Templater {
     let m = RwLock::new(t_inner);
     let arc = Arc::new(m);
 
-    let root = std::path::Path::new("templates");
-
-    Templater { inner: arc }
+    ReloadableTemplater { inner: arc }
 }
 
 fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {

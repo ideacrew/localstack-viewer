@@ -8,28 +8,22 @@ use tera::{Context, Tera};
 
 use rust_embed::Embed;
 
-use crate::templates::shared::split_path;
+use crate::templates::base::{TERA_EXT, TemplateInfo, split_path, tera_with_escape_settings};
 
 #[derive(Embed)]
 #[folder = "templates"]
 #[prefix = "templates/"]
 struct Templates;
 
-pub(crate) struct TemplateInfo {
-    pub(crate) name: String,
-    /// The complete path, including `template_dir`, to this template, if any.
-    pub(crate) path: Option<PathBuf>,
-    /// The extension before the engine extension in the template, if any.
-    pub(crate) data_type: ContentType,
-}
+pub(crate) type Templater = EmbeddedTemplater;
 
-pub(crate) struct Templater {
+pub(crate) struct EmbeddedTemplater {
     tera: Tera,
     content_types: HashMap<String, ContentType>,
 }
 
-impl Templater {
-    pub fn render<C>(&self, template_name: &str, context: C) -> (ContentType, String)
+impl EmbeddedTemplater {
+    pub(crate) fn render<C>(&self, template_name: &str, context: C) -> (ContentType, String)
     where
         C: Into<Context>,
     {
@@ -40,9 +34,7 @@ impl Templater {
     }
 }
 
-static TERA_EXT: &str = "tera";
-
-pub(crate) fn load_templates() -> Vec<TemplateInfo> {
+fn load_templates() -> Vec<TemplateInfo> {
     //let mut templates: Vec<TemplateInfo> = Vec::new();
     let root = std::path::Path::new("templates");
     let template_iters = Templates::iter();
@@ -70,16 +62,7 @@ pub(crate) fn load_templates() -> Vec<TemplateInfo> {
 pub(crate) fn init_template_provider() -> Templater {
     let templates = load_templates();
 
-    let mut tera = Tera::default();
-    let ext = [
-        ".html.tera",
-        ".htm.tera",
-        ".xml.tera",
-        ".html",
-        ".htm",
-        ".xml",
-    ];
-    tera.autoescape_on(ext.to_vec());
+    let mut tera = tera_with_escape_settings();
 
     let typed_templates = HashMap::from_iter(
         templates
@@ -107,7 +90,7 @@ pub(crate) fn init_template_provider() -> Templater {
         tera.templates.insert(ti.name.to_owned(), template);
     }
     tera.build_inheritance_chains().unwrap();
-    Templater {
+    EmbeddedTemplater {
         tera: tera,
         content_types: typed_templates,
     }
