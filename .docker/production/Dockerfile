@@ -3,10 +3,10 @@ FROM rust:alpine3.22 AS builder
 RUN apk update && apk add pkgconfig openssl-dev musl-dev libcrypto3 libssl3 openssl-libs-static
 
 RUN mkdir /build
-COPY src /build/src
-COPY templates /build/templates
-COPY Cargo.lock /build/Cargo.lock
-COPY Cargo.toml /build/Cargo.toml
+COPY server/src /build/src
+COPY server/templates /build/templates
+COPY server/Cargo.lock /build/Cargo.lock
+COPY server/Cargo.toml /build/Cargo.toml
 
 RUN cd /build && cargo build --release
 
@@ -21,7 +21,8 @@ ENV LOCALSTACK_URL="http://localhost:4566"
 RUN mkdir /localstack-viewer && mkdir /localstack-viewer/templates
 
 COPY --from=builder /build/target/release/localstack-viewer /localstack-viewer/localstack-viewer
-COPY templates /localstack-viewer/templates
+# Currently rust-embed doesn't provide the right list of files if you don't do this.
+COPY /server/templates /localstack-viewer/templates
 
 COPY .docker/production/commands.txt /localstack-viewer/commands.txt
 COPY .docker/production/nginx.conf /etc/nginx/nginx.conf
