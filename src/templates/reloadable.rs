@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
     sync::{
         Arc, RwLock,
         mpsc::{Receiver, channel},
@@ -33,7 +32,7 @@ unsafe impl Sync for ReloadableTemplater {}
 impl TemplateInner {
     pub fn reload_if_needed(&mut self) {
         let mut changes = false;
-        while let Ok(_) = self.event_channel.try_recv() {
+        while self.event_channel.try_recv().is_ok() {
             changes = true;
         }
         if changes {
@@ -124,10 +123,10 @@ pub(crate) fn init_template_provider() -> Templater {
         .unwrap();
 
     let t_inner = TemplateInner {
-        watcher: watcher,
         event_channel: rx,
-        tera: tera,
         content_types: typed_templates,
+        watcher,
+        tera,
     };
 
     let m = RwLock::new(t_inner);
@@ -138,6 +137,6 @@ pub(crate) fn init_template_provider() -> Templater {
 
 fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
     let is_file = entry.file_type().is_file();
-    let has_ext = entry.path().extension().map_or(false, |e| e == ext);
+    let has_ext = entry.path().extension().is_some_and(|e| e == ext);
     is_file && has_ext
 }
