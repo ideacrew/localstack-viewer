@@ -1,7 +1,0 @@
-{% extends "base" %}
-{% block content %}
-<h1>LocalStack Viewer</h1>
-<ul>
-  <li><a href="/sms_messages">Sent SMS Messages</a></li>
-</ul>
-{% endblock content %}

@@ -1,2 +1,2 @@
-./localstack-viewer
+cd server && ./localstack-viewer-server
 nginx -c /etc/nginx/nginx.conf

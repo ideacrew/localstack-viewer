@@ -3,8 +3,8 @@ use rocket::{
     http::{ContentType, Status},
     response::Responder,
 };
-use serde::Deserialize;
-use serde_json::{Map, value::RawValue};
+use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 use std::{collections::HashMap, io::Cursor};
 
 pub(crate) struct LocalstackConfiguration {
@@ -13,7 +13,7 @@ pub(crate) struct LocalstackConfiguration {
 
 static SMS_LIST_URI: &str = "/_aws/sns/sms-messages";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub(crate) struct SmsMessageList {
     pub sms_messages: HashMap<String, Vec<Box<RawValue>>>,
     pub region: String,
@@ -48,6 +48,27 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ServiceInvocationError {
     }
 }
 
+impl<'r, 'o: 'r> Responder<'r, 'o> for SmsMessageList {
+    fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+        let json = serde_json::to_string(&self);
+        match json {
+            Err(e) => {
+                let err = format!("{:?}", e);
+                Ok(Response::build()
+                    .status(Status::Ok)
+                    .header(ContentType::JSON)
+                    .sized_body(err.len(), Cursor::new(err))
+                    .finalize())
+            }
+            Ok(a) => Ok(Response::build()
+                .status(Status::Ok)
+                .header(ContentType::JSON)
+                .sized_body(a.len(), Cursor::new(a))
+                .finalize()),
+        }
+    }
+}
+
 pub(crate) async fn get_sms_message_list(
     lc: &LocalstackConfiguration,
 ) -> Result<SmsMessageList, ServiceInvocationError> {
@@ -62,31 +83,5 @@ impl LocalstackConfiguration {
         LocalstackConfiguration {
             base_url: url.to_owned(),
         }
-    }
-}
-
-impl From<SmsMessageList> for tera::Context {
-    fn from(value: SmsMessageList) -> Self {
-        let mut ctxt = tera::Context::new();
-        ctxt.insert("region", &value.region);
-
-        let mut message_groups = Vec::new();
-
-        for (k, v) in value.sms_messages.into_iter() {
-            let mut mg_attrs = Map::new();
-            let mut mg_messages = Vec::new();
-            let _ = mg_attrs.insert(
-                "phone_number".to_owned(),
-                serde_json::Value::String(k.to_owned()),
-            );
-            for m in v {
-                mg_messages.push(serde_json::Value::String(m.as_ref().get().to_owned()));
-            }
-            let _ = mg_attrs.insert("messages".to_owned(), serde_json::Value::Array(mg_messages));
-            message_groups.push(serde_json::Value::Object(mg_attrs));
-        }
-        let message_group_array = serde_json::Value::Array(message_groups);
-        ctxt.insert("message_groups", &message_group_array);
-        ctxt
     }
 }

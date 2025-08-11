@@ -2,3 +2,5 @@
 .docker/production/Dockerfile
 target
 server/target
+ui/target
+ui/dist
