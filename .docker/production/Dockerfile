@@ -1,6 +1,6 @@
 FROM rust:alpine3.22 AS base
 
-RUN apk update && apk add pkgconfig build-base openssl-dev musl-dev libcrypto3 libssl3 openssl-libs-static
+RUN apk update && apk add pkgconfig build-base openssl-dev musl-dev libcrypto3 libssl3 openssl-libs-static curl
 
 FROM base AS server-builder
 
@@ -12,8 +12,8 @@ RUN cd /build && cargo build --release
 FROM base AS ui-builder
 
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo install wasm-bindgen-cli
-RUN cargo install cargo-binstall
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
+RUN cargo binstall wasm-bindgen-cli
 RUN cargo binstall dioxus-cli
 
 RUN mkdir /build
