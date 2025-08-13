@@ -10,7 +10,7 @@ COPY server/ /build/
 RUN cd /build && cargo build --release
 
 # I want to use alpine here, but dioxus doesn't have a binary yet
-FROM rust:bullseye AS ui-builder
+FROM rust:trixie AS ui-builder
 
 RUN apt update && apt-get -y install pkg-config libssl-dev build-essential curl
 RUN rustup target add wasm32-unknown-unknown
