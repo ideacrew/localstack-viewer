@@ -92,6 +92,24 @@ fn Navbar() -> Element {
     }
 }
 
+fn render_sms_messages(ml: &SmsMessageList) -> Element {
+    rsx! {
+        h1 { { ml.region.clone() } }
+        ul {
+           for (k,v) in ml.sms_messages.iter() {
+              li {
+                h3 { { k.to_string() } }
+                ul {
+                  for m in v {
+                    li { "{m:?}" }
+                  }
+                }
+              }
+           }
+        }
+    }
+}
+
 #[component]
 fn SmsMessages() -> Element {
     let app_status: AppContext = use_context();
@@ -109,9 +127,7 @@ fn SmsMessages() -> Element {
     });
 
     match &*message_list.read_unchecked() {
-        Some(Ok(ml)) => rsx! {
-            h1 { { ml.region.clone() } }
-        },
+        Some(Ok(ml)) => render_sms_messages(ml),
         Some(Err(e)) => rsx! {
             code { { format!("Error: {:?}",e) } }
         },
