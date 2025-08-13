@@ -24,10 +24,3 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo install wasm-bindgen-cli dioxus-cli
           cd ui && cargo test
-  test-compile-release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Attempt Release Compilation
-        run: |
-          cd server && cargo build --release

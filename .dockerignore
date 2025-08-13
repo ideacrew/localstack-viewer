@@ -1,4 +1,5 @@
 .git
+.github/workflows
 .docker/production/Dockerfile
 target
 server/target
