@@ -22,3 +22,6 @@ script = []
 
 [web.watcher]
 index_on_404 = false
+
+[[web.proxy]]
+backend = "http://localhost:8000/api/"

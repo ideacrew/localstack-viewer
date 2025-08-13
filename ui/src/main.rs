@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use dioxus::prelude::*;
-use dioxus_router::prelude::*;
 use reqwest::Url;
 use web_sys::window;
 
@@ -19,32 +18,35 @@ enum Route {
 
 #[derive(Clone)]
 struct AppContext {
-    baseUrl: String,
+    base_url: String,
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
-const HEADER_SVG: Asset = asset!("/assets/header.svg");
+const HEADER_SVG: Asset = asset!("/assets/header-light.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct SmsMessageList {
-    pub sms_messages: HashMap<String, Vec<Box<RawValue>>>,
+    pub sms_messages: HashMap<String, Vec<HashMap<String, Box<RawValue>>>>,
     pub region: String,
 }
 
 fn main() {
-    dioxus::launch(App);
+    dioxus::prelude::launch(App);
+}
+
+fn read_base_url() -> String {
+    let base_href = window().unwrap().location().href().unwrap();
+    let mut url = Url::parse(&base_href).unwrap();
+    url.path_segments_mut().unwrap().clear();
+    url.to_string().trim_end_matches("/").to_owned()
 }
 
 #[component]
 fn App() -> Element {
-    let base_href = window().unwrap().location().href().unwrap();
-    let mut url = Url::parse(&base_href).unwrap();
-    url.path_segments_mut().unwrap().clear();
-
     let _ = use_context_provider(|| AppContext {
-        baseUrl: url.to_string().to_owned(),
+        base_url: read_base_url(),
     });
 
     rsx! {
@@ -101,7 +103,18 @@ fn render_sms_messages(ml: &SmsMessageList) -> Element {
                 h3 { { k.to_string() } }
                 ul {
                   for m in v {
-                    li { "{m:?}" }
+                    li {
+                        dl {
+                            for (sk, val) in m {
+                                dt {
+                                    "{sk}"
+                                }
+                                dd {
+                                    { format!("{}", val.as_ref()) }
+                                }
+                            }
+                        }
+                    }
                   }
                 }
               }
@@ -114,7 +127,7 @@ fn render_sms_messages(ml: &SmsMessageList) -> Element {
 fn SmsMessages() -> Element {
     let app_status: AppContext = use_context();
 
-    let app_status_bu = app_status.baseUrl.clone();
+    let app_status_bu = app_status.base_url.clone();
 
     let message_list = use_resource(move || {
         let app_status_base_url = app_status_bu.clone();
