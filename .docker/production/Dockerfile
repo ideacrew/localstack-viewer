@@ -11,7 +11,10 @@ RUN cd /build && cargo build --release
 
 FROM base AS ui-builder
 
-RUN rustup target add wasm32-unknown-unknown && cargo install wasm-bindgen-cli dioxus-cli
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo install wasm-bindgen-cli
+RUN cargo install cargo-binstall
+RUN cargo binstall dioxus-cli
 
 RUN mkdir /build
 COPY ui/ /build/
