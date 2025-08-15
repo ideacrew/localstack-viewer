@@ -100,20 +100,28 @@ fn Navbar() -> Element {
 
 fn render_sms_messages(ml: &SmsMessageList) -> Element {
     rsx! {
-        h1 { { ml.region.clone() } }
+        h1 {
+            { ml.region.clone() } }
         ul {
+           class: "ml-8",
            for (k,v) in ml.sms_messages.iter() {
               li {
-                h3 { { k.to_string() } }
-                ul {
+                h3 {
+                  { k.to_string() }
+                }
+                ol {
+                  class: "list-decimal ml-16",
                   for m in v {
                     li {
+                        class: "mb-4",
                         dl {
                             for (sk, val) in m {
                                 dt {
+                                    class: "font-bold",
                                     "{sk}"
                                 }
                                 dd {
+                                    class: "ml-8",
                                     { format!("{}", val.as_ref()) }
                                 }
                             }

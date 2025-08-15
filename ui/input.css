@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
-h1 {
-    font-size: --text-5xl;
-    line-height: --text-5xl--line-height;
+@layer components {
+    h1 {
+        font-size: var(--text-5xl);
+        line-height: var(--text-5xl--line-height);
+        margin-bottom: calc(var(--spacing) * 3);
+    }
+    h3 {
+        font-size: var(--text-2xl);
+        line-height: var(--text-2xl--line-height);
+        margin-bottom: calc(var(--spacing) * 2);
+    }
 }
 
 @source "./src/**/*.{rs,html,css}";

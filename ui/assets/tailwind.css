@@ -10,8 +10,11 @@
     --spacing: 0.25rem;
     --text-lg: 1.125rem;
     --text-lg--line-height: calc(1.75 / 1.125);
+    --text-2xl: 1.5rem;
+    --text-2xl--line-height: calc(2 / 1.5);
     --text-5xl: 3rem;
     --text-5xl--line-height: 1;
+    --font-weight-bold: 700;
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
   }
@@ -174,6 +177,18 @@
   .mt-8 {
     margin-top: calc(var(--spacing) * 8);
   }
+  .mb-4 {
+    margin-bottom: calc(var(--spacing) * 4);
+  }
+  .mb-8 {
+    margin-bottom: calc(var(--spacing) * 8);
+  }
+  .ml-8 {
+    margin-left: calc(var(--spacing) * 8);
+  }
+  .ml-16 {
+    margin-left: calc(var(--spacing) * 16);
+  }
   .table {
     display: table;
   }
@@ -188,6 +203,9 @@
   }
   .resize {
     resize: both;
+  }
+  .list-decimal {
+    list-style-type: decimal;
   }
   .place-content-center {
     place-content: center;
@@ -206,6 +224,10 @@
     font-size: var(--text-lg);
     line-height: var(--tw-leading, var(--text-lg--line-height));
   }
+  .font-bold {
+    --tw-font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-bold);
+  }
   .underline {
     text-decoration-line: underline;
   }
@@ -214,14 +236,26 @@
     outline-width: 1px;
   }
 }
-h1 {
-  font-size: --text-5xl;
-  line-height: --text-5xl--line-height;
+@layer components {
+  h1 {
+    font-size: var(--text-5xl);
+    line-height: var(--text-5xl--line-height);
+    margin-bottom: calc(var(--spacing) * 3);
+  }
+  h3 {
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line-height);
+    margin-bottom: calc(var(--spacing) * 2);
+  }
 }
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
   initial-value: solid;
+}
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
 }
 @property --tw-outline-style {
   syntax: "*";
@@ -232,6 +266,7 @@ h1 {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
       --tw-border-style: solid;
+      --tw-font-weight: initial;
       --tw-outline-style: solid;
     }
   }
