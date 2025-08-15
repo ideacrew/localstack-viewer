@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+h1 {
+    font-size: --text-5xl;
+    line-height: --text-5xl--line-height;
+}
+
+@source "./src/**/*.{rs,html,css}";

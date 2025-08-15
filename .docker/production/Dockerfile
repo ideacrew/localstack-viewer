@@ -39,6 +39,10 @@ COPY --from=ui-builder /build/target/dx/localstack-viewer-ui/release/web/public/
 COPY .docker/production/commands.txt /localstack-viewer/commands.txt
 COPY .docker/production/nginx.conf /etc/nginx/nginx.conf
 
+RUN chown -R nginx:nginx /localstack-viewer
+
+USER nginx
+
 WORKDIR /localstack-viewer
 
 CMD ["/usr/bin/parallel", "--will-cite", "-u", "-j", "2", "--halt", "now,fail=1", "-a", "/localstack-viewer/commands.txt"]
