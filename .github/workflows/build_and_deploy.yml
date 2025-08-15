@@ -108,8 +108,6 @@ jobs:
           # create local image (for scanning) if it is a pull request
           load: ${{ github.event_name == 'pull_request' }}
           tags: |
-            ${{ format('{0}/{1}', needs.prep.outputs.registryEcr, needs.prep.outputs.taggedImage) }}
-            ${{ format('{0}/{1}', needs.prep.outputs.registryEcr, needs.prep.outputs.latestTag) }}
             ${{ format('{0}/{1}', needs.prep.outputs.registryGhcr, needs.prep.outputs.taggedImage) }}
             ${{ format('{0}/{1}', needs.prep.outputs.registryGhcr, needs.prep.outputs.latestTag) }}
           cache-from: type=local,src=/tmp/.buildx-cache
