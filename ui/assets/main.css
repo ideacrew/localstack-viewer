@@ -51,13 +51,3 @@ body {
     cursor: pointer;
     color: #91a4d2;
 }
-
-/* Blog page */
-#blog {
-    margin-top: 50px;
-}
-
-#blog a {
-    color: #0f1116;
-    margin-top: 50px;
-}

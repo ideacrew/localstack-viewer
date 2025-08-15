@@ -100,8 +100,7 @@ fn Navbar() -> Element {
 
 fn render_sms_messages(ml: &SmsMessageList) -> Element {
     rsx! {
-        h1 {
-            { ml.region.clone() } }
+        h1 { { ml.region.clone() } }
         ul {
            class: "ml-8",
            for (k,v) in ml.sms_messages.iter() {

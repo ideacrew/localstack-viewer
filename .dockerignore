@@ -6,3 +6,5 @@ server/target
 ui/target
 ui/dist
 README.md
+Procfile
+iTermocil.yml

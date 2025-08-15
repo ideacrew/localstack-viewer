@@ -1,0 +1,13 @@
+windows:
+  - name: localstack
+    commands:
+      - localstack start
+  - name: server
+    commands:
+      - cd server && LOCALSTACK_URL=http://localhost:4566 cargo run
+  - name: ui-tailwind
+    commands:
+      - cd ui && npx @tailwindcss/cli -i ./input.css -o ./assets/tailwind.css --watch
+  - name: ui-tailwind
+    commands:
+      - cd ui && dx serve
