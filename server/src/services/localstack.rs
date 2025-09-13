@@ -69,6 +69,17 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for SmsMessageList {
     }
 }
 
+pub(crate) async fn purge_sms_message_list(
+    lc: &LocalstackConfiguration,
+) -> Result<(), ServiceInvocationError> {
+    let client = reqwest::Client::new();
+    let _result = client
+        .delete(lc.base_url.clone() + SMS_LIST_URI)
+        .send()
+        .await;
+    Ok(())
+}
+
 pub(crate) async fn get_sms_message_list(
     lc: &LocalstackConfiguration,
 ) -> Result<SmsMessageList, ServiceInvocationError> {

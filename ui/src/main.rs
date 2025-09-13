@@ -69,7 +69,7 @@ pub fn Hero() -> Element {
                         }
                         p {
                             class: "text-lg pt-3",
-                            "This application provides the ability to browse look at localstack status and contents.\
+                            "This application provides the ability to look at localstack status and contents. \
                             It covers cases not available in the default LocalStack UI - or that are normally only in the paid versions."
                         }
                     }
@@ -98,9 +98,12 @@ fn Navbar() -> Element {
     }
 }
 
-fn render_sms_messages(ml: &SmsMessageList) -> Element {
+fn render_sms_messages(ml: &SmsMessageList, messages_deleted: Signal<bool>) -> Element {
     rsx! {
         h1 { { ml.region.clone() } }
+        message_purge_dialog{
+            messages_deleted
+        }
         ul {
            class: "ml-8",
            for (k,v) in ml.sms_messages.iter() {
@@ -140,7 +143,10 @@ fn SmsMessages() -> Element {
 
     let app_status_bu = app_status.base_url.clone();
 
+    let messages_deleted = use_signal(|| false);
+
     let message_list = use_resource(move || {
+        let _val = messages_deleted.read();
         let app_status_base_url = app_status_bu.clone();
         async move {
             reqwest::get(app_status_base_url + "/api/sms-messages")
@@ -151,13 +157,71 @@ fn SmsMessages() -> Element {
     });
 
     match &*message_list.read_unchecked() {
-        Some(Ok(ml)) => render_sms_messages(ml),
+        Some(Ok(ml)) => render_sms_messages(ml, messages_deleted),
         Some(Err(e)) => rsx! {
             code { { format!("Error: {:?}",e) } }
         },
         None => rsx! {
             h1 { "No data yet..." }
         },
+    }
+}
+
+#[component]
+pub(crate) fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
+    let app_status: AppContext = use_context();
+    let app_status_bu = app_status.base_url.clone();
+    let mut open = use_signal(|| false);
+    let extra_class_value = if open() { "" } else { " hidden" };
+    let app_status_base_url = app_status_bu.clone();
+    let on_message_delete_clicked = move |_e: MouseEvent| {
+        let app_status_base_url = app_status_base_url.clone();
+        spawn(async move {
+            let app_status_base_url = app_status_base_url.clone();
+            let m_val = messages_deleted.clone().read().clone();
+            open.set(false);
+            let client = reqwest::Client::new();
+            let _ = client
+                .post(app_status_base_url + "/api/sms-messages/purge")
+                .send()
+                .await;
+            messages_deleted.set(!m_val);
+        });
+    };
+    rsx! {
+      button {
+        onclick: move |_e| open.set(true),
+        class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
+        { "Purge Messages"}
+      }
+      div {
+          class: "fixed inset-0 bg-black/50 items-center justify-center flex".to_owned() + extra_class_value,
+          div {
+              class: "justify-center p-6 text-center focus:outline-none",
+              tabindex: "0",
+              div {
+                class: "relative transform bg-white rounded-2xl shadow-xl",
+                    h3 { class: "text-left px-4 pt-4",
+                       { "Purge Messages?"} }
+                    div { class: "text-left px-4 py-4",
+                        {"This will purge all messages, are you sure?" }
+                    }
+                    div {
+                        class: "bg-gray-200 py-4 px-3 rounded-b-2xl",
+                            button {
+                                class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300 mr-4",
+                                onclick: move |_e| open.set(false),
+                                { "Cancel" }
+                            }
+                            button {
+                                class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
+                                onclick: on_message_delete_clicked,
+                                { "Delete" }
+                            }
+                    }
+              }
+          }
+      }
     }
 }
 

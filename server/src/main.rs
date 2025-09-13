@@ -1,19 +1,26 @@
 use std::env;
 
-use rocket::{State, get, routes};
+use rocket::{State, get, post, routes};
 
 use crate::services::localstack::{
     LocalstackConfiguration, ServiceInvocationError, SmsMessageList, get_sms_message_list,
+    purge_sms_message_list,
 };
 
 mod services;
 
 #[get("/sms-messages")]
-async fn sms_messages(
+async fn list_sms_messages(
     a_config: &State<AppConfig>,
 ) -> Result<SmsMessageList, ServiceInvocationError> where
 {
     get_sms_message_list(&a_config.localstack_config).await
+}
+
+#[post("/sms-messages/purge")]
+async fn purge_sms_messages(a_config: &State<AppConfig>) -> Result<(), ServiceInvocationError> where
+{
+    purge_sms_message_list(&a_config.localstack_config).await
 }
 
 struct AppConfig {
@@ -29,7 +36,7 @@ async fn main() -> Result<(), rocket::Error> {
     };
 
     let _ = rocket::build()
-        .mount("/api", routes![sms_messages])
+        .mount("/api", routes![list_sms_messages, purge_sms_messages])
         .manage(a_config)
         .ignite()
         .await?
