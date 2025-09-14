@@ -149,7 +149,7 @@ fn SmsMessages() -> Element {
         let _val = messages_deleted.read();
         let app_status_base_url = app_status_bu.clone();
         async move {
-            reqwest::get(app_status_base_url + "/api/sms-messages")
+            reqwest::get(app_status_base_url + "/api/sms/messages")
                 .await?
                 .json::<SmsMessageList>()
                 .await
@@ -182,7 +182,7 @@ pub(crate) fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Elemen
             open.set(false);
             let client = reqwest::Client::new();
             let _ = client
-                .post(app_status_base_url + "/api/sms-messages/purge")
+                .post(app_status_base_url + "/api/sms/purge-messages")
                 .send()
                 .await;
             messages_deleted.set(!m_val);

@@ -1,15 +1,28 @@
 use std::env;
 
-use rocket::{State, get, post, routes};
+use rocket::{
+    Response, State, get,
+    http::ContentType,
+    post,
+    response::{Builder, Responder},
+    routes,
+};
 
 use crate::services::localstack::{
     LocalstackConfiguration, ServiceInvocationError, SmsMessageList, get_sms_message_list,
-    purge_sms_message_list,
+    list_blocked_numbers, purge_sms_message_list,
 };
 
 mod services;
 
-#[get("/sms-messages")]
+#[get("/sms/blocked-numbers")]
+async fn get_blocked_numbers(
+    a_config: &State<AppConfig>,
+) -> Result<(ContentType, String), ServiceInvocationError> {
+    list_blocked_numbers(&a_config.localstack_config).await
+}
+
+#[get("/sms/messages")]
 async fn list_sms_messages(
     a_config: &State<AppConfig>,
 ) -> Result<SmsMessageList, ServiceInvocationError> where
@@ -17,7 +30,7 @@ async fn list_sms_messages(
     get_sms_message_list(&a_config.localstack_config).await
 }
 
-#[post("/sms-messages/purge")]
+#[post("/sms/purge-messages")]
 async fn purge_sms_messages(a_config: &State<AppConfig>) -> Result<(), ServiceInvocationError> where
 {
     purge_sms_message_list(&a_config.localstack_config).await
@@ -36,7 +49,10 @@ async fn main() -> Result<(), rocket::Error> {
     };
 
     let _ = rocket::build()
-        .mount("/api", routes![list_sms_messages, purge_sms_messages])
+        .mount(
+            "/api",
+            routes![list_sms_messages, purge_sms_messages, get_blocked_numbers],
+        )
         .manage(a_config)
         .ignite()
         .await?

@@ -1,7 +1,16 @@
+use aws_config::BehaviorVersion;
+use aws_sdk_sns::{
+    Client, Config,
+    config::{IdentityCache, Region},
+    error::SdkError,
+    operation::list_phone_numbers_opted_out::ListPhoneNumbersOptedOutError,
+};
+use aws_smithy_runtime_api::client::auth::AuthSchemePreference;
+use aws_smithy_types::body::SdkBody;
 use rocket::{
     Response,
     http::{ContentType, Status},
-    response::Responder,
+    response::{Builder, Responder},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
@@ -23,6 +32,9 @@ pub(crate) struct SmsMessageList {
 pub(crate) enum ServiceInvocationError {
     ReqwestError(reqwest::Error),
     SerializationError(serde_json::Error),
+    AwsSdkError(
+        SdkError<ListPhoneNumbersOptedOutError, aws_smithy_runtime_api::http::Response<SdkBody>>,
+    ),
 }
 
 impl From<reqwest::Error> for ServiceInvocationError {
@@ -34,6 +46,19 @@ impl From<reqwest::Error> for ServiceInvocationError {
 impl From<serde_json::Error> for ServiceInvocationError {
     fn from(value: serde_json::Error) -> Self {
         ServiceInvocationError::SerializationError(value)
+    }
+}
+
+impl From<SdkError<ListPhoneNumbersOptedOutError, aws_smithy_runtime_api::http::Response<SdkBody>>>
+    for ServiceInvocationError
+{
+    fn from(
+        value: SdkError<
+            ListPhoneNumbersOptedOutError,
+            aws_smithy_runtime_api::http::Response<SdkBody>,
+        >,
+    ) -> Self {
+        ServiceInvocationError::AwsSdkError(value)
     }
 }
 
@@ -67,6 +92,45 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for SmsMessageList {
                 .finalize()),
         }
     }
+}
+
+fn blocked_number_response<'a>(numbers: Vec<String>) -> (ContentType, String) {
+    let json = serde_json::to_string(&numbers.clone());
+    match json {
+        Err(e) => {
+            let err = format!("{:?}", e);
+            (ContentType::JSON, err)
+        }
+        Ok(a) => (ContentType::JSON, a),
+    }
+}
+
+pub(crate) async fn list_blocked_numbers(
+    lc: &LocalstackConfiguration,
+) -> Result<(ContentType, String), ServiceInvocationError> {
+    let creds = aws_sdk_sns::config::Credentials::new(
+        "ANOTREAL",
+        "notrealrnrELgWzOk3IfjzDKtFBhDby",
+        None,
+        None,
+        "test",
+    );
+    let config = aws_config::defaults(BehaviorVersion::latest())
+        .credentials_provider(creds)
+        .endpoint_url(&lc.base_url)
+        .region("us-east-1")
+        .load()
+        .await;
+    let client = Client::new(&config);
+    client
+        .list_phone_numbers_opted_out()
+        .into_paginator()
+        .items()
+        .send()
+        .try_collect()
+        .await
+        .map_err(|e| e.into())
+        .map(|o| blocked_number_response(o))
 }
 
 pub(crate) async fn purge_sms_message_list(
