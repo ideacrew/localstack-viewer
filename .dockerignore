@@ -6,6 +6,7 @@ server/target
 ui/target
 ui/dist
 ui/node_modules
+data/target
 README.md
 Procfile
 iTermocil.yml

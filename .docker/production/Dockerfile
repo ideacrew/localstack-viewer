@@ -5,9 +5,10 @@ RUN apk update && apk add pkgconfig build-base openssl-dev musl-dev libcrypto3 l
 FROM base AS server-builder
 
 RUN mkdir /build
-COPY server/ /build/
+COPY data/ /build/data/
+COPY server/ /build/server/
 
-RUN cd /build && cargo build --release
+RUN cd /build/server && cargo build --release
 
 # I want to use alpine here, but dioxus doesn't have a binary yet
 FROM rust:bookworm AS ui-builder
@@ -19,9 +20,10 @@ RUN cargo binstall wasm-bindgen-cli@0.2.100
 RUN cargo binstall dioxus-cli
 
 RUN mkdir /build
-COPY ui/ /build/
+COPY ui/ /build/ui/
+COPY data/ /build/data/
 
-RUN cd /build && NO_DOWNLOADS=1 dx bundle --platform web
+RUN cd /build/ui && NO_DOWNLOADS=1 dx bundle --platform web
 
 FROM alpine:3.22 AS deploy
 
@@ -33,8 +35,8 @@ ENV LOCALSTACK_URL="http://host.docker.internal:4566"
 
 RUN mkdir /localstack-viewer && mkdir /localstack-viewer/templates
 
-COPY --from=server-builder /build/target/release/localstack-viewer-server /localstack-viewer/server/localstack-viewer-server
-COPY --from=ui-builder /build/target/dx/localstack-viewer-ui/release/web/public/ /localstack-viewer/ui/
+COPY --from=server-builder /build/server/target/release/localstack-viewer-server /localstack-viewer/server/localstack-viewer-server
+COPY --from=ui-builder /build/ui/target/dx/localstack-viewer-ui/release/web/public/ /localstack-viewer/ui/
 
 COPY .docker/production/commands.txt /localstack-viewer/commands.txt
 COPY .docker/production/nginx.conf /etc/nginx/nginx.conf
