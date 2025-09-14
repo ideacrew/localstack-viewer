@@ -22,5 +22,5 @@ jobs:
       - name: Run Tests
         run: |
           rustup target add wasm32-unknown-unknown
-          cargo install wasm-bindgen-cli dioxus-cli
+          cargo install wasm-bindgen-cli
           cd ui && cargo test

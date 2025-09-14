@@ -8,8 +8,8 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.6.1", features = ["router"] }
-serde = { version = "1.0.219" }
-serde_json = { version = "1.0.140", features = ["raw_value", "std"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.140", features = ["raw_value"] }
 reqwest = { version = "0.12.22", features = ["json"] }
 web-sys = { version = "0.3.77" }
 localstack-viewer-data = { path = "../data", default-features = true }
