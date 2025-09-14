@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
 use dioxus::prelude::*;
 use reqwest::Url;
 use web_sys::window;
 
-use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
+use std::cmp::Eq;
+
+use localstack_viewer_data::SmsMessageList;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {
@@ -27,12 +27,6 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 // const HEADER_SVG: Asset = asset!("/assets/header-light.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
-
-#[derive(Deserialize, Serialize)]
-pub(crate) struct SmsMessageList {
-    pub sms_messages: HashMap<String, Vec<HashMap<String, Box<RawValue>>>>,
-    pub region: String,
-}
 
 fn main() {
     dioxus::prelude::launch(App);

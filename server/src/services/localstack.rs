@@ -1,20 +1,15 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_sns::{
-    Client, Config,
-    config::{IdentityCache, Region},
-    error::SdkError,
-    operation::list_phone_numbers_opted_out::ListPhoneNumbersOptedOutError,
+    Client, error::SdkError, operation::list_phone_numbers_opted_out::ListPhoneNumbersOptedOutError,
 };
-use aws_smithy_runtime_api::client::auth::AuthSchemePreference;
 use aws_smithy_types::body::SdkBody;
 use rocket::{
     Response,
     http::{ContentType, Status},
     response::{Builder, Responder},
 };
-use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
-use std::{collections::HashMap, io::Cursor};
+
+use std::io::Cursor;
 
 pub(crate) struct LocalstackConfiguration {
     base_url: String,
@@ -22,11 +17,7 @@ pub(crate) struct LocalstackConfiguration {
 
 static SMS_LIST_URI: &str = "/_aws/sns/sms-messages";
 
-#[derive(Deserialize, Serialize)]
-pub(crate) struct SmsMessageList {
-    pub sms_messages: HashMap<String, Vec<Box<RawValue>>>,
-    pub region: String,
-}
+use localstack_viewer_data::SmsMessageList;
 
 #[derive(Debug)]
 pub(crate) enum ServiceInvocationError {
@@ -70,27 +61,6 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ServiceInvocationError {
             .header(ContentType::Plain)
             .sized_body(err_str.len(), Cursor::new(err_str))
             .finalize())
-    }
-}
-
-impl<'r, 'o: 'r> Responder<'r, 'o> for SmsMessageList {
-    fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-        let json = serde_json::to_string(&self);
-        match json {
-            Err(e) => {
-                let err = format!("{:?}", e);
-                Ok(Response::build()
-                    .status(Status::Ok)
-                    .header(ContentType::JSON)
-                    .sized_body(err.len(), Cursor::new(err))
-                    .finalize())
-            }
-            Ok(a) => Ok(Response::build()
-                .status(Status::Ok)
-                .header(ContentType::JSON)
-                .sized_body(a.len(), Cursor::new(a))
-                .finalize()),
-        }
     }
 }
 

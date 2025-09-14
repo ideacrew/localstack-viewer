@@ -1438,6 +1438,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "241eaef5fd12c88705a01fc1066c48c4b36e0dd4377dcdc7ec3942cea7a69956"
 
 [[package]]
+name = "localstack-viewer-data"
+version = "0.1.0"
+dependencies = [
+ "rocket",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "localstack-viewer-server"
 version = "0.1.0"
 dependencies = [
@@ -1445,6 +1454,7 @@ dependencies = [
  "aws-sdk-sns",
  "aws-smithy-runtime-api",
  "aws-smithy-types",
+ "localstack-viewer-data",
  "reqwest",
  "rocket",
  "serde",

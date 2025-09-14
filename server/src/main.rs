@@ -2,9 +2,11 @@ use std::env;
 
 use rocket::{State, get, http::ContentType, post, routes};
 
+use localstack_viewer_data::SmsMessageList;
+
 use crate::services::localstack::{
-    LocalstackConfiguration, ServiceInvocationError, SmsMessageList, get_sms_message_list,
-    list_blocked_numbers, purge_sms_message_list,
+    LocalstackConfiguration, ServiceInvocationError, get_sms_message_list, list_blocked_numbers,
+    purge_sms_message_list,
 };
 
 mod services;
