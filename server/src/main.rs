@@ -1,12 +1,6 @@
 use std::env;
 
-use rocket::{
-    Response, State, get,
-    http::ContentType,
-    post,
-    response::{Builder, Responder},
-    routes,
-};
+use rocket::{State, get, http::ContentType, post, routes};
 
 use crate::services::localstack::{
     LocalstackConfiguration, ServiceInvocationError, SmsMessageList, get_sms_message_list,

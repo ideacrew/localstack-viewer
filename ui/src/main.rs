@@ -12,8 +12,10 @@ enum Route {
     #[layout(Navbar)]
     #[route("/")]
     Home {},
-    #[route("/sms-messages")]
+    #[route("/sms/messages")]
     SmsMessages {},
+    #[route("/sms/settings")]
+    SmsSettings {},
 }
 
 #[derive(Clone)]
@@ -92,6 +94,10 @@ fn Navbar() -> Element {
                 to: Route::SmsMessages {  },
                 "SMS Messages"
             }
+            Link {
+                to: Route::SmsSettings {  },
+                "SMS Settings"
+            }
         }
 
         Outlet::<Route> {}
@@ -101,7 +107,7 @@ fn Navbar() -> Element {
 fn render_sms_messages(ml: &SmsMessageList, messages_deleted: Signal<bool>) -> Element {
     rsx! {
         h1 { { ml.region.clone() } }
-        message_purge_dialog{
+        message_purge_dialog {
             messages_deleted
         }
         ul {
@@ -168,7 +174,7 @@ fn SmsMessages() -> Element {
 }
 
 #[component]
-pub(crate) fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
+fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
     let app_status: AppContext = use_context();
     let app_status_bu = app_status.base_url.clone();
     let mut open = use_signal(|| false);
@@ -222,6 +228,43 @@ pub(crate) fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Elemen
               }
           }
       }
+    }
+}
+
+#[component]
+fn blocked_sms_numbers(blocked_list: Resource<Result<Vec<String>, reqwest::Error>>) -> Element {
+    match &*blocked_list.read_unchecked() {
+        Some(Ok(l)) => rsx! {
+            ul {
+                class: "ml-8",
+                for v in l {
+                  li { "{v}" }
+                }
+            }
+        },
+        Some(Err(e)) => rsx! { code { { format!("Error: {:?}",e) } } },
+        _ => rsx! { div { { "No data yet..."} } },
+    }
+}
+
+#[component]
+fn SmsSettings() -> Element {
+    let app_status: AppContext = use_context();
+
+    let app_status_bu = app_status.base_url.clone();
+
+    let blocked_list = use_resource(move || {
+        let app_status_base_url = app_status_bu.clone();
+        async move {
+            reqwest::get(app_status_base_url + "/api/sms/blocked-numbers")
+                .await?
+                .json::<Vec<String>>()
+                .await
+        }
+    });
+    rsx! {
+        h1 { "Blocked Numbers" }
+        blocked_sms_numbers { blocked_list }
     }
 }
 
