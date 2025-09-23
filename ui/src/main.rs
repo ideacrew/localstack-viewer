@@ -79,23 +79,26 @@ pub fn Hero() -> Element {
 #[component]
 fn Navbar() -> Element {
     rsx! {
-        div {
-            id: "navbar",
-            Link {
-                to: Route::Home {},
-                "Home"
-            }
-            Link {
-                to: Route::SmsMessages {  },
-                "SMS Messages"
-            }
-            Link {
-                to: Route::SmsSettings {  },
-                "SMS Settings"
+        header {
+            nav {
+                id: "navbar",
+                Link {
+                    to: Route::Home {},
+                    "Home"
+                }
+                Link {
+                    to: Route::SmsMessages {  },
+                    "SMS Messages"
+                }
+                Link {
+                    to: Route::SmsSettings {  },
+                    "SMS Settings"
+                }
             }
         }
-
-        Outlet::<Route> {}
+        main {
+          Outlet::<Route> {}
+        }
     }
 }
 

@@ -1,37 +1,7 @@
 /* App-wide styling */
+
 body {
-    background-color: #ffffff;
-    color: #0f1116;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     margin: 20px;
-}
-
-#links {
-    width: 400px;
-    text-align: left;
-    font-size: x-large;
-    color: #0f1116;
-    display: flex;
-    flex-direction: column;
-}
-
-#links a {
-    color: #0f1116;
-    text-decoration: none;
-    margin-top: 20px;
-    margin: 10px 0px;
-    border: #0f1116 1px solid;
-    border-radius: 5px;
-    padding: 10px;
-}
-
-#links a:hover {
-    background-color: #ffffff;
-    cursor: pointer;
-}
-
-#header {
-    max-width: 1200px;
 }
 
 /* Navbar */
