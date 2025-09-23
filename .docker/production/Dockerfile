@@ -33,6 +33,7 @@ ENV ROCKET_ADDRESS="0.0.0.0"
 ENV ROCKET_PORT="8000"
 ENV LOCALSTACK_URL="http://host.docker.internal:4566"
 ENV EVENT_SOURCE_AMQP_URL=""
+ENV EVENT_SOURCE_VHOST=""
 
 RUN mkdir /localstack-viewer && mkdir /localstack-viewer/templates
 
