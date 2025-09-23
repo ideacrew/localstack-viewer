@@ -1,15 +1,6 @@
 use aws_config::BehaviorVersion;
-use aws_sdk_sns::{
-    Client, error::SdkError, operation::list_phone_numbers_opted_out::ListPhoneNumbersOptedOutError,
-};
-use aws_smithy_types::body::SdkBody;
-use rocket::{
-    Response,
-    http::{ContentType, Status},
-    response::{Builder, Responder},
-};
-
-use std::io::Cursor;
+use aws_sdk_sns::Client;
+use rocket::http::ContentType;
 
 pub(crate) struct LocalstackConfiguration {
     base_url: String,
@@ -19,50 +10,7 @@ static SMS_LIST_URI: &str = "/_aws/sns/sms-messages";
 
 use localstack_viewer_data::SmsMessageList;
 
-#[derive(Debug)]
-pub(crate) enum ServiceInvocationError {
-    ReqwestError(reqwest::Error),
-    SerializationError(serde_json::Error),
-    AwsSdkError(
-        SdkError<ListPhoneNumbersOptedOutError, aws_smithy_runtime_api::http::Response<SdkBody>>,
-    ),
-}
-
-impl From<reqwest::Error> for ServiceInvocationError {
-    fn from(value: reqwest::Error) -> Self {
-        ServiceInvocationError::ReqwestError(value)
-    }
-}
-
-impl From<serde_json::Error> for ServiceInvocationError {
-    fn from(value: serde_json::Error) -> Self {
-        ServiceInvocationError::SerializationError(value)
-    }
-}
-
-impl From<SdkError<ListPhoneNumbersOptedOutError, aws_smithy_runtime_api::http::Response<SdkBody>>>
-    for ServiceInvocationError
-{
-    fn from(
-        value: SdkError<
-            ListPhoneNumbersOptedOutError,
-            aws_smithy_runtime_api::http::Response<SdkBody>,
-        >,
-    ) -> Self {
-        ServiceInvocationError::AwsSdkError(value)
-    }
-}
-
-impl<'r, 'o: 'r> Responder<'r, 'o> for ServiceInvocationError {
-    fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-        let err_str = format!("{:?}:", self);
-        Ok(Response::build()
-            .status(Status::InternalServerError)
-            .header(ContentType::Plain)
-            .sized_body(err_str.len(), Cursor::new(err_str))
-            .finalize())
-    }
-}
+use crate::services::ServiceInvocationError;
 
 fn blocked_number_response<'a>(numbers: Vec<String>) -> (ContentType, String) {
     let json = serde_json::to_string(&numbers.clone());

@@ -13,3 +13,4 @@ aws-sdk-sns = { version = "1.85.0" }
 aws-smithy-types = "1.3.2"
 aws-smithy-runtime-api = "1.9.0"
 localstack-viewer-data = { path = "../data", features=["server"] }
+lapin = { version = "3.6.0" }

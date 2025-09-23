@@ -3,8 +3,8 @@
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-sans: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu,
+        Cantarell, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
       "Courier New", monospace;
     --color-gray-200: oklch(92.8% 0.006 264.531);
@@ -312,6 +312,9 @@
   }
 }
 @layer components {
+  body {
+    font-family: var(--font-sans);
+  }
   h1 {
     font-size: var(--text-5xl);
     line-height: var(--text-5xl--line-height);

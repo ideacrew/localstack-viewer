@@ -2,10 +2,11 @@ use dioxus::prelude::*;
 use reqwest::Url;
 use web_sys::window;
 
-use serde_json::value::RawValue;
-use std::cmp::Eq;
-
 use localstack_viewer_data::SmsMessageList;
+
+mod modal_dialog;
+
+use crate::modal_dialog::Modal;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {
@@ -172,7 +173,6 @@ fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
     let app_status: AppContext = use_context();
     let app_status_bu = app_status.base_url.clone();
     let mut open = use_signal(|| false);
-    let extra_class_value = if open() { "" } else { " hidden" };
     let app_status_base_url = app_status_bu.clone();
     let on_message_delete_clicked = move |_e: MouseEvent| {
         let app_status_base_url = app_status_base_url.clone();
@@ -189,39 +189,56 @@ fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
         });
     };
     rsx! {
-      button {
-        onclick: move |_e| open.set(true),
-        class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
-        { "Purge Messages"}
-      }
-      div {
-          class: "fixed inset-0 bg-black/50 items-center justify-center flex".to_owned() + extra_class_value,
-          div {
-              class: "justify-center p-6 text-center focus:outline-none",
-              tabindex: "0",
-              div {
-                class: "relative transform bg-white rounded-2xl shadow-xl",
-                    h3 { class: "text-left px-4 pt-4",
-                       { "Purge Messages?"} }
-                    div { class: "text-left px-4 py-4",
-                        {"This will purge all messages, are you sure?" }
-                    }
-                    div {
-                        class: "bg-gray-200 py-4 px-3 rounded-b-2xl",
-                            button {
-                                class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300 mr-4",
-                                onclick: move |_e| open.set(false),
-                                { "Cancel" }
-                            }
-                            button {
-                                class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
-                                onclick: on_message_delete_clicked,
-                                { "Delete" }
-                            }
-                    }
-              }
-          }
-      }
+        button {
+          onclick: move |_e| open.set(true),
+          class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
+          { "Purge Messages"}
+        }
+        Modal {
+            title: "Purge Messages?", body: "This will purge all messages, are you sure?",
+            open_signal: open,
+                button {
+                        class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
+                        onclick: on_message_delete_clicked,
+                        { "Delete" }
+                }
+        }
+    }
+}
+
+#[component]
+fn update_contact_gateway_blocklist() -> Element {
+    let mut open = use_signal(|| false);
+    let app_status: AppContext = use_context();
+    let app_status_bu = app_status.base_url.clone();
+    let app_status_base_url = app_status_bu.clone();
+    let on_update_list_clicked = move |_e: MouseEvent| {
+        let app_status_base_url = app_status_base_url.clone();
+        spawn(async move {
+            let app_status_base_url = app_status_base_url.clone();
+            open.set(false);
+            let client = reqwest::Client::new();
+            let _ = client
+                .post(app_status_base_url + "/api/sms/update-blocklist")
+                .send()
+                .await;
+        });
+    };
+    rsx! {
+        button {
+          onclick: move |_e| open.set(true),
+          class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
+          { "Update Blocklist"}
+        }
+        Modal {
+            title: "Update Blocklist?", body: "This will request contact gateway to update it's blocklist.  This may also send blocklist messages to Enroll.  Are you sure?",
+            open_signal: open,
+            button {
+                    class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
+                    onclick: on_update_list_clicked,
+                    { "Yes I'm Sure" }
+            }
+        }
     }
 }
 
@@ -259,6 +276,7 @@ fn SmsSettings() -> Element {
     rsx! {
         h1 { "Blocked Numbers" }
         blocked_sms_numbers { blocked_list }
+        update_contact_gateway_blocklist { }
     }
 }
 

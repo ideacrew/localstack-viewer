@@ -32,6 +32,7 @@ RUN apk update && apk add parallel nginx
 ENV ROCKET_ADDRESS="0.0.0.0"
 ENV ROCKET_PORT="8000"
 ENV LOCALSTACK_URL="http://host.docker.internal:4566"
+ENV EVENT_SOURCE_AMQP_URL=""
 
 RUN mkdir /localstack-viewer && mkdir /localstack-viewer/templates
 
