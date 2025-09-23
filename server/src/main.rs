@@ -36,7 +36,7 @@ async fn purge_sms_messages(a_config: &State<AppConfig>) -> Result<(), ServiceIn
     purge_sms_message_list(&a_config.localstack_config).await
 }
 
-#[post("/sms/update_blocklist")]
+#[post("/sms/update-blocklist")]
 async fn update_sms_blocklist(a_config: &State<AppConfig>) -> Result<(), ServiceInvocationError> where
 {
     publish_update_trigger_message(&a_config.event_source_connection).await
@@ -51,8 +51,9 @@ struct AppConfig {
 async fn main() -> Result<(), rocket::Error> {
     let localstack_url = env::var("LOCALSTACK_URL").unwrap();
     let amqp_url = env::var("EVENT_SOURCE_AMQP_URL").unwrap();
+    let vhost = env::var("EVENT_SOURCE_VHOST").unwrap_or("/".to_owned());
 
-    let conn = contact_gateway::establish_connection(&amqp_url)
+    let conn = contact_gateway::establish_connection(&amqp_url, &vhost)
         .await
         .unwrap();
 
