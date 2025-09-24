@@ -1,12 +1,19 @@
 use dioxus::prelude::*;
 use reqwest::Url;
+use web_sys::js_sys::Date;
 use web_sys::window;
 
 use localstack_viewer_data::SmsMessageList;
 
 mod modal_dialog;
 
+mod dashboard;
+
+use crate::dashboard::Dashboard;
+
 use crate::modal_dialog::Modal;
+
+static MESSAGES_LAST_UPDATED: GlobalSignal<f64> = Global::new(|| Date::now());
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {
@@ -22,11 +29,12 @@ enum Route {
 #[derive(Clone)]
 struct AppContext {
     base_url: String,
+    sms_message_list: Resource<Result<SmsMessageList, reqwest::Error>>,
+    blocked_list: Resource<Result<Vec<String>, reqwest::Error>>,
 }
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
-// const HEADER_SVG: Asset = asset!("/assets/header-light.svg");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
 fn main() {
@@ -42,8 +50,36 @@ fn read_base_url() -> String {
 
 #[component]
 fn App() -> Element {
+    let base_url = read_base_url();
+
+    let base_url_value = base_url.clone();
+    let base_url_value1 = base_url.clone();
+
+    let message_list: Resource<Result<SmsMessageList, reqwest::Error>> = use_resource(move || {
+        let _mlu = MESSAGES_LAST_UPDATED();
+        let app_status_base_url = base_url_value.clone();
+        async move {
+            reqwest::get(app_status_base_url + "/api/sms/messages")
+                .await?
+                .json::<SmsMessageList>()
+                .await
+        }
+    });
+
+    let blocked_list = use_resource(move || {
+        let app_status_base_url = base_url_value1.clone();
+        async move {
+            reqwest::get(app_status_base_url + "/api/sms/blocked-numbers")
+                .await?
+                .json::<Vec<String>>()
+                .await
+        }
+    });
+
     let _ = use_context_provider(|| AppContext {
-        base_url: read_base_url(),
+        base_url: base_url,
+        sms_message_list: message_list,
+        blocked_list: blocked_list,
     });
 
     rsx! {
@@ -66,8 +102,7 @@ pub fn Hero() -> Element {
                         }
                         p {
                             class: "text-lg pt-3",
-                            "This application provides the ability to look at localstack status and contents. \
-                            It covers cases not available in the default LocalStack UI - or that are normally only in the paid versions."
+                            "This application provides the ability to look at localstack status and contents.  It covers cases not available in the default LocalStack UI - or that are normally only in the paid versions."
                         }
                     }
                 }
@@ -80,17 +115,32 @@ pub fn Hero() -> Element {
 fn Navbar() -> Element {
     rsx! {
         header {
+            class: "bg-black p-4 text-white",
             nav {
                 id: "navbar",
+                class: "flex items-center",
                 Link {
+                    class: "mr-4 text-xl flex items-center",
                     to: Route::Home {},
-                    "Home"
+                    svg {
+                        class: "mr-2",
+                        width: "24",
+                        height: "24",
+                        view_box: "0 0 24 24",
+                        fill: "currentColor",
+                        path {
+                            d: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                        }
+                    }
+                    { "LocalStack Viewer" }
                 }
                 Link {
+                    class: "mr-4",
                     to: Route::SmsMessages {  },
                     "SMS Messages"
                 }
                 Link {
+                    class: "mr-4",
                     to: Route::SmsSettings {  },
                     "SMS Settings"
                 }
@@ -102,11 +152,11 @@ fn Navbar() -> Element {
     }
 }
 
-fn render_sms_messages(ml: &SmsMessageList, messages_deleted: Signal<bool>) -> Element {
+fn render_sms_messages(ml: &SmsMessageList) -> Element {
     rsx! {
         h1 { { ml.region.clone() } }
         message_purge_dialog {
-            messages_deleted
+
         }
         ul {
            class: "ml-8",
@@ -145,23 +195,8 @@ fn render_sms_messages(ml: &SmsMessageList, messages_deleted: Signal<bool>) -> E
 fn SmsMessages() -> Element {
     let app_status: AppContext = use_context();
 
-    let app_status_bu = app_status.base_url.clone();
-
-    let messages_deleted = use_signal(|| false);
-
-    let message_list = use_resource(move || {
-        let _val = messages_deleted.read();
-        let app_status_base_url = app_status_bu.clone();
-        async move {
-            reqwest::get(app_status_base_url + "/api/sms/messages")
-                .await?
-                .json::<SmsMessageList>()
-                .await
-        }
-    });
-
-    match &*message_list.read_unchecked() {
-        Some(Ok(ml)) => render_sms_messages(ml, messages_deleted),
+    match &*app_status.sms_message_list.read_unchecked() {
+        Some(Ok(ml)) => render_sms_messages(ml),
         Some(Err(e)) => rsx! {
             code { { format!("Error: {:?}",e) } }
         },
@@ -172,7 +207,7 @@ fn SmsMessages() -> Element {
 }
 
 #[component]
-fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
+fn message_purge_dialog() -> Element {
     let app_status: AppContext = use_context();
     let app_status_bu = app_status.base_url.clone();
     let mut open = use_signal(|| false);
@@ -181,14 +216,15 @@ fn message_purge_dialog(mut messages_deleted: Signal<bool>) -> Element {
         let app_status_base_url = app_status_base_url.clone();
         spawn(async move {
             let app_status_base_url = app_status_base_url.clone();
-            let m_val = messages_deleted.clone().read().clone();
+            let _mlu = MESSAGES_LAST_UPDATED.read();
+            drop(_mlu);
             open.set(false);
             let client = reqwest::Client::new();
             let _ = client
                 .post(app_status_base_url + "/api/sms/purge-messages")
                 .send()
                 .await;
-            messages_deleted.set(!m_val);
+            *MESSAGES_LAST_UPDATED.write() = Date::now();
         });
     };
     rsx! {
@@ -265,17 +301,8 @@ fn blocked_sms_numbers(blocked_list: Resource<Result<Vec<String>, reqwest::Error
 fn SmsSettings() -> Element {
     let app_status: AppContext = use_context();
 
-    let app_status_bu = app_status.base_url.clone();
+    let blocked_list = app_status.blocked_list;
 
-    let blocked_list = use_resource(move || {
-        let app_status_base_url = app_status_bu.clone();
-        async move {
-            reqwest::get(app_status_base_url + "/api/sms/blocked-numbers")
-                .await?
-                .json::<Vec<String>>()
-                .await
-        }
-    });
     rsx! {
         h1 { "Blocked Numbers" }
         blocked_sms_numbers { blocked_list }
@@ -286,7 +313,12 @@ fn SmsSettings() -> Element {
 /// Home page
 #[component]
 fn Home() -> Element {
+    let app_status: AppContext = use_context();
+
     rsx! {
-        Hero {}
+        Dashboard {
+            sms_message_list: app_status.sms_message_list,
+            blocked_list: app_status.blocked_list,
+        }
     }
 }

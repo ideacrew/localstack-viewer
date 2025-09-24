@@ -1,23 +1,6 @@
 /* App-wide styling */
-
-body {
-    margin: 20px;
-}
-
-/* Navbar */
-#navbar {
-    display: flex;
-    flex-direction: row;
-}
-
-#navbar a {
-    color: #0f1116;
-    margin-right: 20px;
-    text-decoration: none;
-    transition: color 0.2s ease;
-}
-
-#navbar a:hover {
-    cursor: pointer;
-    color: #91a4d2;
+.sms_count_image {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    height: 48px;
+    width: 48px;
 }
