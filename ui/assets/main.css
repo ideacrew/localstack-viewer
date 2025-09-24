@@ -4,3 +4,9 @@
     height: 48px;
     width: 48px;
 }
+
+.sms_blocked_image {
+    background: linear-gradient(135deg, #b22222, #ff0801);
+    height: 48px;
+    width: 48px;
+}

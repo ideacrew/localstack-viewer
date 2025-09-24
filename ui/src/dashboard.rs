@@ -4,7 +4,7 @@ use localstack_viewer_data::SmsMessageList;
 fn sms_message_count(ml: &SmsMessageList) -> Element {
     rsx! {
         div {
-            class: "rounded-2xl inset-ring inset-ring-gray-300 flex flex-row mr-2 p-4 place-items-center",
+            class: "rounded-2xl inset-ring inset-ring-gray-300 flex flex-row mr-2 p-4 place-items-center shadow-md",
             div {
               class: "sms_count_image text-white rounded-xl flex items-center justify-center mr-3",
               svg {
@@ -33,14 +33,35 @@ fn sms_message_count(ml: &SmsMessageList) -> Element {
 fn blocked_number_count(ml: &Vec<String>) -> Element {
     rsx! {
         div {
-            class: "rounded-2xl inset-ring inset-ring-gray-300 flex flex-col p-4 mr-2",
+            class: "rounded-2xl inset-ring inset-ring-gray-300 flex flex-row mr-2 p-4 place-items-center shadow-md",
             div {
-              class: "text-3xl font-bold",
-              { ml.len().to_string() }
+              class: "sms_blocked_image text-white rounded-xl flex items-center justify-center mr-3",
+              svg {
+                  width: "24",
+                  height: "24",
+                  view_box: "0 0 21 21",
+                  g {
+                      fill: "none",
+                      fill_rule: "evenodd",
+                      stroke: "currentColor",
+                      stroke_linecap: "round",
+                      stroke_linejoin: "round",
+                      transform: "translate(2 2)",
+                      circle { cx: "8.5", cy: "8.5", r: "8"  }
+                      path { d: "m3 3 11 11", transform: "matrix(-1 0 0 1 17 0)" }
+                  }
+              }
             }
             div {
-                class: "text-1xl",
-                { "Blocked Numbers" }
+              class: "flex flex-col",
+              div {
+                class: "text-3xl font-bold",
+                { ml.len().to_string() }
+              }
+              div {
+                  class: "text-1xl",
+                  { "Blocked Numbers" }
+              }
             }
         }
     }
