@@ -37,6 +37,6 @@ You can see the application at `localhost:8080`.
 ### The Hard Way
 
 1. Start localstack
-2. Start the backend: `cd server && LOCALSTACK_URL=http://localhost:4566 cargo run`
+2. Start the backend: `cd server && LOCALSTACK_URL=http://localhost:4566 EVENT_SOURCE_AMQP_URL=amqp://guest:guest@localhost:5672 EVENT_SOURCE_VHOST=event_source cargo run`
 3. Start tailwind: `cd ui && npx @tailwindcss/cli -i ./input.css -o ./assets/tailwind.css --watch`
-3. Start the frontend: `cd ui && dx serve`
+3. Start the frontend: `cd ui && dx serve --port 8080`
