@@ -8,6 +8,16 @@ pub struct SmsMessageList {
     pub region: String,
 }
 
+impl SmsMessageList {
+    pub fn message_count(&self) -> usize {
+        self.sms_messages.iter().fold(0, |c, (_k, v)| c + v.len())
+    }
+
+    pub fn number_count(&self) -> usize {
+        self.sms_messages.keys().len()
+    }
+}
+
 #[cfg(feature = "server")]
 use std::io::Cursor;
 

@@ -19,7 +19,7 @@ fn sms_message_count(ml: &SmsMessageList) -> Element {
               class: "flex flex-col",
               div {
                 class: "text-3xl font-bold",
-                { ml.sms_messages.len().to_string() }
+                { ml.message_count().to_string() }
               }
               div {
                   class: "text-1xl",
