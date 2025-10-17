@@ -68,7 +68,10 @@ pub(crate) async fn get_sms_message_list(
     let result = reqwest::get(lc.base_url.clone() + SMS_LIST_URI).await;
     let text = result?.text().await?;
     let data: serde_json::Result<SmsMessageList> = serde_json::from_str(&text);
-    Ok(data?)
+    match data {
+        Ok(d) => Ok(d),
+        Err(e) => Err(ServiceInvocationError::SerializationError(e, text)),
+    }
 }
 
 impl LocalstackConfiguration {

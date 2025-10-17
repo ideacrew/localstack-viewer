@@ -9,9 +9,14 @@ mod modal_dialog;
 
 mod dashboard;
 
+mod sms_messages_list;
+
+mod contact_gateway;
+
+use crate::contact_gateway::update_contact_gateway_blocklist;
 use crate::dashboard::Dashboard;
 
-use crate::modal_dialog::Modal;
+use crate::sms_messages_list::sms_messages_list;
 
 static MESSAGES_LAST_UPDATED: GlobalSignal<f64> = Global::new(|| Date::now());
 
@@ -152,132 +157,18 @@ fn Navbar() -> Element {
     }
 }
 
-fn render_sms_messages(ml: &SmsMessageList) -> Element {
-    rsx! {
-        h1 { { ml.region.clone() } }
-        message_purge_dialog {
-
-        }
-        ul {
-           class: "ml-8",
-           for (k,v) in ml.sms_messages.iter() {
-              li {
-                h3 {
-                  { k.to_string() }
-                }
-                ol {
-                  class: "list-decimal ml-16",
-                  for m in v {
-                    li {
-                        class: "mb-4",
-                        dl {
-                            for (sk, val) in m {
-                                dt {
-                                    class: "font-bold",
-                                    "{sk}"
-                                }
-                                dd {
-                                    class: "ml-8",
-                                    { format!("{}", val.as_ref()) }
-                                }
-                            }
-                        }
-                    }
-                  }
-                }
-              }
-           }
-        }
-    }
-}
-
 #[component]
 fn SmsMessages() -> Element {
     let app_status: AppContext = use_context();
 
     match &*app_status.sms_message_list.read_unchecked() {
-        Some(Ok(ml)) => render_sms_messages(ml),
+        Some(Ok(ml)) => sms_messages_list(ml),
         Some(Err(e)) => rsx! {
             code { { format!("Error: {:?}",e) } }
         },
         None => rsx! {
             h1 { "No data yet..." }
         },
-    }
-}
-
-#[component]
-fn message_purge_dialog() -> Element {
-    let app_status: AppContext = use_context();
-    let app_status_bu = app_status.base_url.clone();
-    let mut open = use_signal(|| false);
-    let app_status_base_url = app_status_bu.clone();
-    let on_message_delete_clicked = move |_e: MouseEvent| {
-        let app_status_base_url = app_status_base_url.clone();
-        spawn(async move {
-            let app_status_base_url = app_status_base_url.clone();
-            let _mlu = MESSAGES_LAST_UPDATED.read();
-            drop(_mlu);
-            open.set(false);
-            let client = reqwest::Client::new();
-            let _ = client
-                .post(app_status_base_url + "/api/sms/purge-messages")
-                .send()
-                .await;
-            *MESSAGES_LAST_UPDATED.write() = Date::now();
-        });
-    };
-    rsx! {
-        button {
-          onclick: move |_e| open.set(true),
-          class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
-          { "Purge Messages"}
-        }
-        Modal {
-            title: "Purge Messages?", body: "This will purge all messages, are you sure?",
-            open_signal: open,
-                button {
-                        class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
-                        onclick: on_message_delete_clicked,
-                        { "Delete" }
-                }
-        }
-    }
-}
-
-#[component]
-fn update_contact_gateway_blocklist() -> Element {
-    let mut open = use_signal(|| false);
-    let app_status: AppContext = use_context();
-    let app_status_bu = app_status.base_url.clone();
-    let app_status_base_url = app_status_bu.clone();
-    let on_update_list_clicked = move |_e: MouseEvent| {
-        let app_status_base_url = app_status_base_url.clone();
-        spawn(async move {
-            let app_status_base_url = app_status_base_url.clone();
-            open.set(false);
-            let client = reqwest::Client::new();
-            let _ = client
-                .post(app_status_base_url + "/api/sms/update-blocklist")
-                .send()
-                .await;
-        });
-    };
-    rsx! {
-        button {
-          onclick: move |_e| open.set(true),
-          class: "rounded-xl inset-ring inset-ring-gray-300 px-2",
-          { "Update Blocklist"}
-        }
-        Modal {
-            title: "Update Blocklist?", body: "This will request contact gateway to update it's blocklist.  This may also send blocklist messages to Enroll.  Are you sure?",
-            open_signal: open,
-            button {
-                    class: "rounded-lg shadow-xs bg-white px-3 py-2 inset-ring inset-ring-black-300",
-                    onclick: on_update_list_clicked,
-                    { "Yes I'm Sure" }
-            }
-        }
     }
 }
 
@@ -305,8 +196,14 @@ fn SmsSettings() -> Element {
 
     rsx! {
         h1 { "Blocked Numbers" }
-        blocked_sms_numbers { blocked_list }
         update_contact_gateway_blocklist { }
+        div {
+          h3 { "Blocked Numbers in LocalStack" }
+          blocked_sms_numbers { blocked_list }
+        }
+        div {
+          h3 { "Blocked Numbers in Contact Gateway" }
+        }
     }
 }
 

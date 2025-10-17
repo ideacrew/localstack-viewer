@@ -20,7 +20,7 @@ pub(crate) enum ServiceInvocationError {
     #[allow(dead_code)]
     ReqwestError(reqwest::Error),
     #[allow(dead_code)]
-    SerializationError(serde_json::Error),
+    SerializationError(serde_json::Error, String),
     #[allow(dead_code)]
     AwsSdkError(
         SdkError<ListPhoneNumbersOptedOutError, aws_smithy_runtime_api::http::Response<SdkBody>>,
@@ -37,7 +37,7 @@ impl From<reqwest::Error> for ServiceInvocationError {
 
 impl From<serde_json::Error> for ServiceInvocationError {
     fn from(value: serde_json::Error) -> Self {
-        ServiceInvocationError::SerializationError(value)
+        ServiceInvocationError::SerializationError(value, "".to_owned())
     }
 }
 

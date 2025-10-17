@@ -37,7 +37,7 @@ pub(crate) async fn establish_connection(uri: &str, vhost: &str) -> lapin::Resul
     lapin::Connection::connect(&merge_uri_and_vhost(uri, vhost), cp).await
 }
 
-async fn publish_msg(c: &Connection) -> lapin::Result<Confirmation> {
+async fn publish_blocklist_sync_msg(c: &Connection) -> lapin::Result<Confirmation> {
     let ch = c.create_channel().await?;
     let cso = ConfirmSelectOptions { nowait: false };
     let _cs = ch.confirm_select(cso).await?;
@@ -57,7 +57,7 @@ async fn publish_msg(c: &Connection) -> lapin::Result<Confirmation> {
 pub(crate) async fn publish_update_trigger_message(
     c: &Connection,
 ) -> Result<(), ServiceInvocationError> {
-    let pcr = publish_msg(c).await;
+    let pcr = publish_blocklist_sync_msg(c).await;
     match pcr {
         Err(x) => Err(ServiceInvocationError::ContactGatewayMessageError(
             ContactGatewayMessagePublishError::PublishError(x),

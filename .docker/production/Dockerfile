@@ -27,7 +27,7 @@ RUN cd /build/ui && NO_DOWNLOADS=1 dx bundle --platform web
 
 FROM alpine:3.22 AS deploy
 
-RUN apk update && apk add parallel nginx
+RUN apk update && apk upgrade && apk add parallel nginx
 
 ENV ROCKET_ADDRESS="0.0.0.0"
 ENV ROCKET_PORT="8000"

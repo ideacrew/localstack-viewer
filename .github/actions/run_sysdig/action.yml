@@ -1,0 +1,57 @@
+name: Download and Run Sysdig
+description: |
+  Download the sysdig binary, try to cache the scanning database, and scan the specified image.
+inputs:
+  imageLocation:
+    required: true
+    description: Where to find the image we're scanning.
+  sysdigApiToken:
+    required: true
+    description: The API token for reporting to sysdig.
+  sysdigSecureEndpoint:
+    required: false
+    description: The endpoint for reporting of Sysdig results.
+    default: "https://us2.app.sysdig.com"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check Sysdig CLI Version
+      shell: "bash"
+      run: |
+        mkdir -p cache
+        curl -sL -o "${GITHUB_WORKSPACE}/cache/sysdig_latest_version.txt" https://download.sysdig.com/scanning/sysdig-cli-scanner/latest_version.txt
+    - name: Sysdig CLI Binary Cache
+      uses: actions/cache@v4
+      id: sysdig-cli-binary-cache
+      with:
+        path: cache/sysdig-cli-scanner
+        key: ${{ runner.os }}-sysdig-binary-cache-${{ hashFiles('**/sysdig_latest_version.txt') }}
+    - name: Download Sysdig CLI Binary
+      if: steps.sysdig-cli-binary-cache.outputs.cache-hit != 'true'
+      shell: "bash"
+      run: |
+        curl -sL -o "${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner" "https://download.sysdig.com/scanning/bin/sysdig-cli-scanner/$(cat ${GITHUB_WORKSPACE}/cache/sysdig_latest_version.txt)/linux/amd64/sysdig-cli-scanner"
+        chmod +x "${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner"
+    - name: Setup Sysdig DB Cache
+      uses: actions/cache@v4
+      with:
+        path: cache/db
+        key: ${{ runner.os }}-sysdig-db-cache-
+    - name: Setup Sysdig Scanner Cache
+      uses: actions/cache@v4
+      with:
+        path: cache/scanner-cache
+        key: ${{ runner.os }}-sysdig-scanner-cache-
+    - name: Scan the image with Sysdig
+      shell: bash
+      env:
+        SECURE_API_TOKEN: ${{ inputs.sysdigApiToken }}
+        SYSDIG_SECURE_ENDPOINT: ${{ inputs.sysdigSecureEndpoint }}
+      run: |
+        ${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner \
+          --apiurl "${SYSDIG_SECURE_ENDPOINT}" \
+          ${{ inputs.imageLocation }} \
+          --console-log \
+          --dbpath="${GITHUB_WORKSPACE}/cache/db/" \
+          --cachepath="${GITHUB_WORKSPACE}/cache/scanner-cache/"

@@ -5,9 +5,13 @@ on:
   push:
     branches:
       - "trunk"
+    tags-ignore:
+      - "*"
   pull_request:
     branches:
       - "trunk"
+    tags-ignore:
+      - "*"
 
 concurrency:
   group: docker-biad-${{ github.ref }}
@@ -21,12 +25,10 @@ jobs:
     if: github.repository_owner == 'ideacrew' && ((github.event_name == 'push') || (github.event_name == 'workflow_dispatch') || (github.event.pull_request.head.repo.owner.login == 'ideacrew'))
     runs-on: ubuntu-latest
     outputs:
+      imageName: ${{ steps.prep.outputs.image_name }}
+      tagName: ${{ steps.prep.outputs.tag_name }}
       taggedImage: ${{ steps.prep.outputs.tagged_image }}
-      shortSha: ${{ steps.prep.outputs.short_sha}}
-      branchName: ${{ steps.prep.outputs.branch_name }}
-      latestTag: ${{ steps.prep.outputs.latest_tag }}
       repositoryName: ${{ steps.prep.outputs.repository_name }}
-      registryEcr: ${{ steps.prep.outputs.registry_ecr }}
       registryGhcr: ${{ steps.prep.outputs.registry_ghcr }}
     steps:
       - name: Git branch name
@@ -39,12 +41,10 @@ jobs:
           REPO=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')
           TAG=${{ env.GIT_BRANCH_NAME }}-$(echo $GITHUB_SHA | head -c7)
           IMAGE=ideacrew/$REPO
+          echo "image_name=${IMAGE}" >> $GITHUB_OUTPUT
+          echo "tag_name=${TAG}" >> $GITHUB_OUTPUT
           echo "tagged_image=${IMAGE}:${TAG}" >> $GITHUB_OUTPUT
-          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
-          echo "branch_name=${{ env.GIT_BRANCH_NAME }}" >> $GITHUB_OUTPUT
           echo "repository_name=$REPO" >> $GITHUB_OUTPUT
-          echo "latest_tag=${IMAGE}:latest" >> $GITHUB_OUTPUT
-          echo "registry_ecr=public.ecr.aws" >> $GITHUB_OUTPUT
           echo "registry_ghcr=ghcr.io" >> $GITHUB_OUTPUT
 
   # Uses buildx to build and push the image
@@ -54,104 +54,30 @@ jobs:
     steps:
       # Check out repository
       - uses: actions/checkout@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          install: true
-          version: v0.9.1
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          # Key is named differently to avoid collision
-          key: ${{ runner.os }}-multi-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-multi-buildx
-
-      # Provide credentials for AWS
-      - name: Configure AWS credentials
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      # Must use docker login in order to specify public registry
-      - name: Login to Public ECR
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ needs.prep.outputs.registryEcr }}
-          username: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-      - name: Login to GHCR
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ needs.prep.outputs.registryGhcr }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build Image
-        uses: docker/build-push-action@v2
+        uses: ./.github/actions/build_image
+        id: build-docker-image
         with:
-          context: .
-          builder: ${{ steps.buildx.outputs.name }}
-          file: .docker/production/Dockerfile
-          # Set the desired build target here
-          target: deploy
-          # needed to access mongo and rabbit on GHA machine
-          network: host
-          # send to public registry if not a pull request
-          push: ${{ github.event_name != 'pull_request' }}
-          # create local image (for scanning) if it is a pull request
-          load: ${{ github.event_name == 'pull_request' }}
-          tags: |
-            ${{ format('{0}/{1}', needs.prep.outputs.registryGhcr, needs.prep.outputs.taggedImage) }}
-            ${{ format('{0}/{1}', needs.prep.outputs.registryGhcr, needs.prep.outputs.latestTag) }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          # Note the mode=max here
-          # More: https://github.com/moby/buildkit#--export-cache-options
-          # And: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
-          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
-          build-args: |
-            HOSTNAME=172.17.0.1
-
-      - name: Setup cache
-        uses: actions/cache@v4
-        with:
-          path: cache
-          key: ${{ runner.os }}-cache-${{ hashFiles('**/sysdig-cli-scanner', '**/latest_version.txt', '**/db/main.db.meta.json', '**/scanner-cache/inlineScannerCache.db') }}
+          dockerFile: ".docker/production/Dockerfile"
+          baseImageName: ${{ needs.prep.outputs.imageName }}
+          tagName: ${{ needs.prep.outputs.tagName }}
+          pushImage: ${{ github.event_name != 'pull_request' }}
+          loadImage: ${{ github.event_name == 'pull_request' }}
+          ghcrUsername: ${{ github.actor }}
+          ghcrPassword: ${{ secrets.GITHUB_TOKEN }}
+          pushLatest: true
       - name: Scan docker image
         if: github.event_name != 'pull_request'
         id: scan
         uses: anchore/scan-action@main
         with:
-          image: ${{ needs.prep.outputs.registryGhcr }}/${{ needs.prep.outputs.taggedImage }}
+          image: ${{ steps.build-docker-image.outputs.imageLocation }}
           acs-report-enable: true
           fail-build: false
           severity-cutoff: critical
-      - name: Download sysdig scanner if needed and scan the image
-        env:
-          SECURE_API_TOKEN: ${{ secrets.SECURE_API_TOKEN }}
-        run: |
-          curl -sLO https://download.sysdig.com/scanning/sysdig-cli-scanner/latest_version.txt
-          mkdir -p "${GITHUB_WORKSPACE}/cache/db/"
-          if [ ! -f "${GITHUB_WORKSPACE}/cache/latest_version.txt" ] || [ "$(cat ./latest_version.txt)" != "$(cat ${GITHUB_WORKSPACE}/cache/latest_version.txt)" ]; then
-            cp ./latest_version.txt "${GITHUB_WORKSPACE}/cache/latest_version.txt"
-            curl -sL -o "${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner" "https://download.sysdig.com/scanning/bin/sysdig-cli-scanner/$(cat ${GITHUB_WORKSPACE}/cache/latest_version.txt)/linux/amd64/sysdig-cli-scanner"
-            chmod +x "${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner"
-          else
-            echo "Latest version of sysdig cli scanner is already downloaded"
-          fi
-          ${GITHUB_WORKSPACE}/cache/sysdig-cli-scanner \
-            --apiurl "${SYSDIG_SECURE_ENDPOINT}" \
-            ${{ format('{0}/{1}', needs.prep.outputs.registryGhcr, needs.prep.outputs.taggedImage) }} \
-            --console-log \
-            --dbpath="${GITHUB_WORKSPACE}/cache/db/" \
-            --cachepath="${GITHUB_WORKSPACE}/cache/scanner-cache/"
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - name: Scan the image with Sysdig
+        uses: ./.github/actions/run_sysdig
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          imageLocation: ${{ steps.build-docker-image.outputs.imageLocation }}
+          sysdigApiToken: ${{ secrets.SECURE_API_TOKEN }}

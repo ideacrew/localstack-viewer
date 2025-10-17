@@ -36,7 +36,7 @@ async fn purge_sms_messages(a_config: &State<AppConfig>) -> Result<(), ServiceIn
     purge_sms_message_list(&a_config.localstack_config).await
 }
 
-#[post("/sms/update-blocklist")]
+#[post("/contact-gateway/update-blocklist")]
 async fn update_sms_blocklist(a_config: &State<AppConfig>) -> Result<(), ServiceInvocationError> where
 {
     publish_update_trigger_message(&a_config.event_source_connection).await

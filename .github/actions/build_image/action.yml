@@ -1,0 +1,109 @@
+name: Build and Push Image
+description: Build and push the image and also update the 'latest' image.
+inputs:
+  dockerFile:
+    required: true
+    description: Path to the docker build file in the project.
+  baseImageName:
+    required: true
+    description: Base name of the image, without a tag, such as 'ideacrew/enroll'.
+  tagName:
+    required: true
+    description: Tag suffix to apply to the end of the image name, usually '<branch-name>-<short sha>'.
+  registryGhcr:
+    required: false
+    description: The GCHR registry for uploads.
+    default: "ghcr.io"
+  pushImage:
+    required: true
+    description: Should the image be pushed?
+  loadImage:
+    required: true
+    description: Should the image be loaded?
+  ghcrUserName:
+    required: true
+    description: Username for GHCR.
+  ghcrPassword:
+    required: true
+    description: Password for GHCR.
+  pushLatest:
+    required: false
+    description: Should we also update the latest docker image?
+    default: "false"
+outputs:
+  imageLocation:
+    description: The location the image was uploaded to, if any.
+    value: ${{ steps.set-base-image-tags.outputs.tagged_image }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set Base Image Tags
+      id: set-base-image-tags
+      shell: "bash"
+      env:
+        TAGGED_IMAGE: ${{format('{0}/{1}:{2}', inputs.registryGhcr, inputs.baseImageName, inputs.tagName)}}
+      run: |
+        echo "tagged_image=${TAGGED_IMAGE}" >> $GITHUB_OUTPUT
+        echo "DOCKER_IMAGE_TAGS=${TAGGED_IMAGE}" >> $GITHUB_ENV
+    - name: Add Latest Tag
+      if: ${{ inputs.pushLatest != 'false' }}
+      shell: "bash"
+      env:
+        LATEST_IMAGE_TAG_NAME: ${{ format('{0}/{1}:latest', inputs.registryGhcr, inputs.baseImageName) }}
+        TAGGED_IMAGE_LIST: ${{ env.DOCKER_IMAGE_TAGS }}
+      run: |
+        echo "DOCKER_IMAGE_TAGS=${TAGGED_IMAGE_LIST},${LATEST_IMAGE_TAG_NAME}" >> $GITHUB_ENV
+    - name: List Image Tags
+      shell: "bash"
+      env:
+        DOCKER_IMAGE_TAGS: ${{ env.DOCKER_IMAGE_TAGS }}
+      run: |
+        echo -e "Building Tagged Images: ${DOCKER_IMAGE_TAGS}"
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        install: true
+        version: v0.9.1
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        # Key is named differently to avoid collision
+        key: ${{ runner.os }}-multi-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-multi-buildx
+    - name: Login to GHCR
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ inputs.registryGhcr }}
+        username: ${{ inputs.ghcrUsername }}
+        password: ${{ inputs.ghcrPassword }}
+    - name: Build and Push Image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        builder: ${{ steps.buildx.outputs.name }}
+        file: ${{ inputs.dockerFile }}
+        # Set the desired build target here
+        target: deploy
+        # needed to access mongo and rabbit on GHA machine
+        network: host
+        # send to public registry if not a pull request
+        push: ${{ inputs.pushImage }}
+        # create local image (for scanning) if it is a pull request
+        load: ${{ inputs.loadImage }}
+        tags: ${{ env.DOCKER_IMAGE_TAGS }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        # Note the mode=max here
+        # More: https://github.com/moby/buildkit#--export-cache-options
+        # And: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
+        cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+        build-args: |
+          HOSTNAME=172.17.0.1
+    - name: Move cache
+      shell: "bash"
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
